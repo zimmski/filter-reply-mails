@@ -1,0 +1,5 @@
+(On [^\n\r]+ wrote:.+)
+([\n\r]Von meinem iPhone gesendet.+)
+([\n\r]__.+)
+([\n\r]--.+)
+([\n\r]Von: [^\n\r]+\r?\nGesendet:.+)
