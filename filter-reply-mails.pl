@@ -14,7 +14,7 @@ use Try::Tiny;
 
 sub options_validate {
 	my ($opts) = @_;
-	
+
 	for my $i(qw/filter-html filter-text mail-server mail-user mail-pwd folder-tmp folder-dst/) {
 		if (not $opts->{$i}) {
 			say_error("argument '$i' is needed.");
@@ -22,23 +22,23 @@ sub options_validate {
 			return;
 		}
 	}
-	
+
 	for my $i(qw/folder-tmp folder-dst/) {
 		if (not -d $opts->{$i} or not -w $opts->{$i}) {
 			say_error("folder '" . $opts->{$i} . "' is not writable");
-			
+
 			return;
 		}
 	}
-	
+
 	for my $i(qw/filter-html filter-text/) {
 		if (not -f $opts->{$i} or not -r $opts->{$i}) {
 			say_error("regexes file '" . $opts->{$i} . "' is not readable");
-			
+
 			return;
 		}
 	}
-	
+
 	return 1;
 }
 
@@ -134,12 +134,12 @@ if (not $opts->{'mail-do-not-connect'}) {
 
 		$imap->message_to_file($file, $msg)
 			or die "IMAP message_to_file error: $@";
-		
+
 		if (not $opts->{'mail-do-not-delete-mail'}) {
 			if ($verbose) {
 				say 'Delete mail ' . $msg;
 			}
-		
+
 			$imap->delete_message($msg)
 				or die "IMAP delete_message error: $@";
 		}
@@ -169,7 +169,7 @@ opendir(DIR, $opts->{'folder-tmp'})
 
 my @regex_html = map { trim($_) } read_file($opts->{'filter-html'});
 my @regex_text = map { trim($_) } read_file($opts->{'filter-text'});
-	
+
 my $parser = MIME::Parser->new();
 
 if ($opts->{'in-memory'}) {
@@ -189,16 +189,16 @@ while (my $file = readdir(DIR)) {
 		}
 
 		my $m = $parser->parse_open($opts->{'folder-tmp'} . $file);
-		
+
 		my @parts = ($m);
 		my %parts_remove;
-		
+
 		while (my $p = pop(@parts)) {
 			# ignore attachments right away
 			if ($p->head->count('Content-Disposition')) {
 				return;
 			}
-			
+
 			if ($p->parts) {
 				push(@parts, $p->parts);
 			}
@@ -225,10 +225,10 @@ while (my $file = readdir(DIR)) {
 						}
 
 						$t =~ s/${r}//sg;
-						
+
 						if ($1) {
 							my $remove = $1;
-							
+
 							while ($remove =~ m/src="cid:([^"]+)"/sg) {
 								$parts_remove{'<' . $1 . '>'} = 1;
 
@@ -243,13 +243,13 @@ while (my $file = readdir(DIR)) {
 				}
 			}
 		}
-		
+
 		@parts = ($m);
 
 		while (my $p = pop(@parts)) {
 			if ($p->parts) {
 				my @keep = grep { not $_->head or not $_->head->count('Content-ID') or not exists $parts_remove{trim($_->head->get('Content-ID'))} } $p->parts;
-				
+
 				$p->parts(\@keep);
 
 				if (@keep) {
