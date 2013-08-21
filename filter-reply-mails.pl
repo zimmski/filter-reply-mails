@@ -7,6 +7,7 @@ use Modern::Perl;
 use File::Slurp;
 use Getopt::Compact;
 use IO::File;
+use IO::Socket::SSL qw/SSL_VERIFY_NONE/;
 use Mail::IMAPClient;
 use MIME::Parser;
 use String::Util qw/trim/;
