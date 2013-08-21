@@ -204,7 +204,7 @@ while (my $file = readdir(DIR)) {
 		while (my $p = pop(@parts)) {
 			# ignore attachments right away
 			if ($p->head->count('Content-Disposition')) {
-				return;
+				next;
 			}
 
 			if ($p->parts) {
@@ -216,7 +216,7 @@ while (my $file = readdir(DIR)) {
 
 					for my $r(@regex_text) {
 						if (not $r) {
-							return;
+							next;
 						}
 
 						$t =~ s/${r}//sg;
@@ -229,7 +229,7 @@ while (my $file = readdir(DIR)) {
 
 					for my $r(@regex_html) {
 						if (not $r) {
-							return;
+							next;
 						}
 
 						$t =~ s/${r}//sg;
