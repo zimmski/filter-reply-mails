@@ -58,6 +58,7 @@ my $options = Getopt::Compact->new(
 		[ 'in-memory', 'Do the MIME work in memory (default is off)' ],
 		[ 'mail-do-not-connect', 'Do not open an IMAP connection' ],
 		[ 'mail-do-not-delete-mail', 'Do not delete mails after fetching them' ],
+		[ 'mail-do-not-verify-certificate', 'Do not verify the SSL certificate of the IMAP connection' ],
 		[ 'mail-folder', 'Folder from where mails will be fetched (default is INBOX)', ':s' ],
 		[ 'mail-pwd', 'Password of the IMAP user', '=s' ],
 		[ 'mail-server', 'Server connection string for the IMAP connection (default port is 993)', '=s' ],
@@ -97,10 +98,16 @@ if (not $opts->{'mail-do-not-connect'}) {
 	);
 
 	if ($opts->{'mail-ssl'}) {
-		$imap_arguments{Ssl} = 1;
+		$imap_arguments{Ssl} = ($opts->{'mail-do-not-verify-certificate'}) ? [
+			verify_hostname => 0,
+			SSL_verify_mode => SSL_VERIFY_NONE,
+		] : 1;
 	}
 	if ($opts->{'mail-tls'}) {
-		$imap_arguments{Starttls} = 1;
+		$imap_arguments{Starttls} = ($opts->{'mail-do-not-verify-certificate'}) ? [
+			verify_hostname => 0,
+			SSL_verify_mode => SSL_VERIFY_NONE,
+		] : 1;
 	}
 
 	if ($verbose) {
