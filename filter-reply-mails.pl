@@ -98,6 +98,7 @@ sub say_verbose {
 	}
 }
 
+my $path = '';
 my @files;
 
 if ($opts->{file}) {
@@ -186,9 +187,8 @@ else {
 	opendir(DIR, $opts->{'folder-tmp'})
 		or die $!;
 
-	while (my $file = readdir(DIR)) {
-		push(@files, $opts->{'folder-tmp'} . $file)
-	}
+	$path = $opts->{'folder-tmp'} . '/';
+	@files = readdir(DIR);
 
 	closedir(DIR);
 }
@@ -215,9 +215,9 @@ for my $file(@files) {
 	}
 
 	try {
-		say_verbose('Open mail ' . $file);
+		say_verbose('Open mail ' . $path . $file);
 
-		my $m = $parser->parse_open($file);
+		my $m = $parser->parse_open($path . $file);
 
 		my @parts = ($m);
 		my %parts_remove;
@@ -322,12 +322,12 @@ for my $file(@files) {
 		die $_;
 	}
 	finally {
-		say_verbose("\tClean up $file");
-
 		$parser->filer->purge;
 
 		if (! $opts->{'do-not-remove-files'}) {
-			unlink($opts->{'folder-tmp'} . $file);
+			say_verbose("\tClean up $file");
+
+			unlink($file);
 		}
 	};
 }
