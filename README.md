@@ -45,3 +45,7 @@ That's it! If you need a SSL or TLS IMAP connection just use the corresponding -
 
 -h, --help                             This help message
 ```
+
+# Legal
+
+The source for filter-reply-mails is released under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
