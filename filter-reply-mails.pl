@@ -1,6 +1,10 @@
 #!/usr/bin/perl
 
-our $VERSION = 1.1;
+our $VERSION = 1.2;
+
+use utf8;
+
+binmode STDOUT, ':utf8';
 
 use Modern::Perl;
 
@@ -10,53 +14,21 @@ use IO::File;
 use IO::Socket::SSL qw/SSL_VERIFY_NONE/;
 use Mail::IMAPClient;
 use MIME::Parser;
+use Mojo::DOM;
 use String::Util qw/trim/;
 use Try::Tiny;
-
-sub options_validate {
-	my ($opts) = @_;
-
-	for my $i(qw/filter-html filter-text mail-server mail-user mail-pwd folder-tmp folder-dst/) {
-		if (not $opts->{$i}) {
-			say_error("argument '$i' is needed.");
-
-			return;
-		}
-	}
-
-	for my $i(qw/folder-tmp folder-dst/) {
-		if (not -d $opts->{$i} or not -w $opts->{$i}) {
-			say_error("folder '" . $opts->{$i} . "' is not writable");
-
-			return;
-		}
-	}
-
-	for my $i(qw/filter-html filter-text/) {
-		if (not -f $opts->{$i} or not -r $opts->{$i}) {
-			say_error("regexes file '" . $opts->{$i} . "' is not readable");
-
-			return;
-		}
-	}
-
-	return 1;
-}
-
-sub say_error {
-	my ($text) = @_;
-
-	say "\x1B[0;31mERROR: $text\x1b[0m\n";
-}
 
 my $options = Getopt::Compact->new(
 	name => 'Script to filter the text and html parts of mails fetched from an IMAP folder based on given regexes',
 	struct => [
-		[ 'filter-html', 'Regexes for html parts', '=s' ],
-		[ 'filter-text', 'Regexes for text parts', '=s' ],
+		[ 'do-not-remove-files', 'Do not remove mail files' ],
+		[ 'filter-dom', 'DOM selectors for html parts', ':s' ],
+		[ 'filter-html', 'Regexes for html parts', ':s' ],
+		[ 'filter-text', 'Regexes for text parts', ':s' ],
 		[ 'folder-tmp', 'Temporary mail folder', '=s' ],
 		[ 'folder-dst', 'Destination mail folder', '=s' ],
 		[ 'in-memory', 'Do the MIME work in memory (default is off)' ],
+		[ 'file', 'Parse MIME file and print the result to STDOUT', ':s' ],
 		[ 'mail-do-not-connect', 'Do not open an IMAP connection' ],
 		[ 'mail-do-not-delete-mail', 'Do not delete mails after fetching them' ],
 		[ 'mail-do-not-verify-certificate', 'Do not verify the SSL certificate of the IMAP connection' ],
@@ -78,105 +50,154 @@ if (not $options->status() or not options_validate($opts)) {
 	exit 1;
 }
 
-if ($opts->{'folder-tmp'} !~ m/\/$/) {
-	$opts->{'folder-tmp'} .= '/';
-}
-if ($opts->{'folder-dst'} !~ m/\/$/) {
-	$opts->{'folder-dst'} .= '/';
-}
-
 my $verbose = $opts->{verbose};
 
-if (not $opts->{'mail-do-not-connect'}) {
-	if ($opts->{'mail-server'} !~ m/:\d+$/) {
-		$opts->{'mail-server'} .= ':993';
-	}
+sub options_validate {
+	my ($opts) = @_;
 
-	my %imap_arguments = (
-		Server => $opts->{'mail-server'},
-		User => $opts->{'mail-user'},
-		Password => $opts->{'mail-pwd'},
-	);
+	if (not $opts->{file}) {
+		for my $i(qw/folder-tmp folder-dst/) {
+			if (not $opts->{$i}) {
+				say_error("argument '$i' is needed.");
 
-	if ($opts->{'mail-ssl'}) {
-		$imap_arguments{Ssl} = ($opts->{'mail-do-not-verify-certificate'}) ? [
-			verify_hostname => 0,
-			SSL_verify_mode => SSL_VERIFY_NONE,
-		] : 1;
-	}
-	if ($opts->{'mail-tls'}) {
-		$imap_arguments{Starttls} = ($opts->{'mail-do-not-verify-certificate'}) ? [
-			verify_hostname => 0,
-			SSL_verify_mode => SSL_VERIFY_NONE,
-		] : 1;
-	}
-
-	if ($verbose) {
-		say sprintf('Connect to IMAP server with %s:%s@%s', $opts->{'mail-user'}, $opts->{'mail-pwd'}, $opts->{'mail-server'});
-	}
-
-	my $imap = Mail::IMAPClient->new(%imap_arguments)
-		or die "IMAP connection error: $@";
-
-	$opts->{'mail-folder'} ||= 'INBOX';
-
-	if ($verbose) {
-		say 'Open IMAP folder ' . $opts->{'mail-folder'};
-	}
-
-	$imap->select($opts->{'mail-folder'})
-		or die "IMAP select error: $@";
-
-	my @msgs = $imap->search('ALL');
-
-	if (not @msgs and $@) {
-		die "IMAP search error: $@";
-	}
-
-	foreach my $msg (@msgs) {
-		my $file = $opts->{'folder-tmp'} . $msg . '.msg';
-
-		if ($verbose) {
-			say sprintf('Fetch mail %s to %s', $msg, $file);
-		}
-
-		$imap->message_to_file($file, $msg)
-			or die "IMAP message_to_file error: $@";
-
-		if (not $opts->{'mail-do-not-delete-mail'}) {
-			if ($verbose) {
-				say 'Delete mail ' . $msg;
+				return;
 			}
-
-			$imap->delete_message($msg)
-				or die "IMAP delete_message error: $@";
 		}
 	}
 
-	if ($verbose) {
-		say 'Close IMAP folder ' . $opts->{'mail-folder'};
+	for my $i(qw/folder-tmp folder-dst/) {
+		if ($opts->{$i} and (not -d $opts->{$i} or not -w $opts->{$i})) {
+			say_error("folder '" . $opts->{$i} . "' is not writable");
+
+			return;
+		}
 	}
 
-	$imap->close($opts->{'mail-folder'})
-		or die "IMAP close error: $@";
+	for my $i(qw/filter-html filter-text/) {
+		if ($opts->{$i} and (not -f $opts->{$i} or not -r $opts->{$i})) {
+			say_error("regexes file '" . $opts->{$i} . "' is not readable");
 
-	if ($verbose) {
-		say 'Disconnect from IMAP';
+			return;
+		}
 	}
 
-	$imap->logout()
-		or die "IMAP logout error: $@";
+	return 1;
 }
 
-if ($verbose) {
-	say 'Filter mails';
+sub say_error {
+	my ($text) = @_;
+
+	print STDERR "\x1B[0;31mERROR: $text\x1b[0m\n";
 }
 
-opendir(DIR, $opts->{'folder-tmp'})
-	or die $!;
+sub say_verbose {
+	my ($text) = @_;
 
-my @regex_html = map { trim($_) } read_file($opts->{'filter-html'});
-my @regex_text = map { trim($_) } read_file($opts->{'filter-text'});
+	if ($verbose) {
+		print STDERR "\x1B[0;36mVERBOSE: $text\x1b[0m\n";
+	}
+}
+
+my @files;
+
+if ($opts->{file}) {
+	push(@files, $opts->{file});
+}
+else {
+	if ($opts->{'folder-tmp'} !~ m/\/$/) {
+		$opts->{'folder-tmp'} .= '/';
+	}
+	if ($opts->{'folder-dst'} !~ m/\/$/) {
+		$opts->{'folder-dst'} .= '/';
+	}
+
+	if (not $opts->{'mail-do-not-connect'}) {
+		if ($opts->{'mail-server'} !~ m/:\d+$/) {
+			$opts->{'mail-server'} .= ':993';
+		}
+
+		my %imap_arguments = (
+			Server => $opts->{'mail-server'},
+			User => $opts->{'mail-user'},
+			Password => $opts->{'mail-pwd'},
+		);
+
+		if ($opts->{'mail-ssl'}) {
+			$imap_arguments{Ssl} = ($opts->{'mail-do-not-verify-certificate'}) ? [
+				verify_hostname => 0,
+				SSL_verify_mode => SSL_VERIFY_NONE,
+			] : 1;
+		}
+		if ($opts->{'mail-tls'}) {
+			$imap_arguments{Starttls} = ($opts->{'mail-do-not-verify-certificate'}) ? [
+				verify_hostname => 0,
+				SSL_verify_mode => SSL_VERIFY_NONE,
+			] : 1;
+		}
+
+		say_verbose(sprintf('Connect to IMAP server with %s:%s@%s', $opts->{'mail-user'}, $opts->{'mail-pwd'}, $opts->{'mail-server'}));
+
+		my $imap = Mail::IMAPClient->new(%imap_arguments)
+			or die "IMAP connection error: $@";
+
+		$opts->{'mail-folder'} ||= 'INBOX';
+
+		say_verbose('Open IMAP folder ' . $opts->{'mail-folder'});
+
+		$imap->select($opts->{'mail-folder'})
+			or die "IMAP select error: $@";
+
+		my @msgs = $imap->search('ALL');
+
+		if (not @msgs and $@) {
+			die "IMAP search error: $@";
+		}
+
+		foreach my $msg (@msgs) {
+			my $file = $opts->{'folder-tmp'} . $msg . '.msg';
+
+			say_verbose(sprintf('Fetch mail %s to %s', $msg, $file));
+
+			$imap->message_to_file($file, $msg)
+				or die "IMAP message_to_file error: $@";
+
+			if (not $opts->{'mail-do-not-delete-mail'}) {
+				if ($verbose) {
+					say 'Delete mail ' . $msg;
+				}
+
+				$imap->delete_message($msg)
+					or die "IMAP delete_message error: $@";
+			}
+		}
+
+		say_verbose('Close IMAP folder ' . $opts->{'mail-folder'});
+
+		$imap->close($opts->{'mail-folder'})
+			or die "IMAP close error: $@";
+
+		say_verbose('Disconnect from IMAP');
+
+		$imap->logout()
+			or die "IMAP logout error: $@";
+	}
+
+
+	opendir(DIR, $opts->{'folder-tmp'})
+		or die $!;
+
+	while (my $file = readdir(DIR)) {
+		push(@files, $opts->{'folder-tmp'} . $file)
+	}
+
+	closedir(DIR);
+}
+
+say_verbose('Filter mails');
+
+my @dom_html = ($opts->{'filter-dom'}) ? map { trim($_) } read_file($opts->{'filter-dom'}) : ();
+my @regex_html = ($opts->{'filter-html'}) ? map { trim($_) } read_file($opts->{'filter-html'}) : ();
+my @regex_text = ($opts->{'filter-text'}) ? map { trim($_) } read_file($opts->{'filter-text'}) : ();
 
 my $parser = MIME::Parser->new();
 
@@ -186,17 +207,17 @@ if ($opts->{'in-memory'}) {
 	$parser->output_to_core(1);
 }
 
-while (my $file = readdir(DIR)) {
+for my $file(@files) {
 	if ($file =~ m/^\./ or $file !~ m/\.msg$/) {
+		say_verbose("ignore $file because of wrong extension");
+
 		next;
 	}
 
 	try {
-		if ($verbose) {
-			say 'Open mail ' . $opts->{'folder-tmp'} . $file;
-		}
+		say_verbose('Open mail ' . $file);
 
-		my $m = $parser->parse_open($opts->{'folder-tmp'} . $file);
+		my $m = $parser->parse_open($file);
 
 		my @parts = ($m);
 		my %parts_remove;
@@ -224,24 +245,46 @@ while (my $file = readdir(DIR)) {
 
 					$p->bodyhandle(MIME::Body::InCore->new($t));
 				}
-				elsif ($p->mime_type eq 'text/html' and @regex_html) {
+				elsif ($p->mime_type eq 'text/html') {
 					my $t = $p->bodyhandle->as_string;
 
-					for my $r(@regex_html) {
-						if (not $r) {
-							next;
+					$t =~ s/&nbsp;/ /sg;
+
+					if (@dom_html) {
+						my $dom = Mojo::DOM->new(charset => 'UTF-8')->parse($t);
+
+						for my $selector (@dom_html) {
+							$dom->find($selector)->each(sub {
+								my $i =  shift;
+
+								while ($i->to_xml =~ m/src="cid:([^"]+)"/sg) {
+									$parts_remove{'<' . $1 . '>'} = 1;
+
+									say_verbose("\tFound attachment $1 to remove");
+								}
+
+								$i->remove;
+							});
 						}
 
-						$t =~ s/${r}//sg;
+						$t = $dom->to_xml();
+					}
 
-						if ($1) {
-							my $remove = $1;
+					if (@regex_html) {
+						for my $r(@regex_html) {
+							if (not $r) {
+								next;
+							}
 
-							while ($remove =~ m/src="cid:([^"]+)"/sg) {
-								$parts_remove{'<' . $1 . '>'} = 1;
+							$t =~ s/${r}//sg;
 
-								if ($verbose) {
-									say "\tFound attachment $1 to remove";
+							if ($1) {
+								my $remove = $1;
+
+								while ($remove =~ m/src="cid:([^"]+)"/sg) {
+									$parts_remove{'<' . $1 . '>'} = 1;
+
+									say_verbose("\tFound attachment $1 to remove");
 								}
 							}
 						}
@@ -266,27 +309,27 @@ while (my $file = readdir(DIR)) {
 			}
 		}
 
-		if ($verbose) {
-			say "\tMove mail to " . $opts->{'folder-dst'} . $file;
+		if ($opts->{file}) {
+			$m->print(\*STDOUT);
 		}
+		else {
+			say_verbose("\tMove mail to " . $opts->{'folder-dst'} . $file);
 
-		$m->print(IO::File->new($opts->{'folder-dst'} . $file, 'w'));
+			$m->print(IO::File->new($opts->{'folder-dst'} . $file, 'w'));
+		}
 	}
 	catch {
 		die $_;
 	}
 	finally {
-		if ($verbose) {
-			say "\tClean up $file";
-		}
+		say_verbose("\tClean up $file");
 
 		$parser->filer->purge;
-		unlink($opts->{'folder-tmp'} . $file);
+
+		if (! $opts->{'do-not-remove-files'}) {
+			unlink($opts->{'folder-tmp'} . $file);
+		}
 	};
 }
 
-closedir(DIR);
-
-if ($verbose) {
-	say 'All done, will exit now';
-}
+say_verbose('All done, will exit now');

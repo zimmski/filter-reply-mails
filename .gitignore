@@ -14,3 +14,8 @@ META.yml
 MYMETA.yml
 nytprof.out
 pm_to_blib
+
+# editors and IDEs
+
+filter-reply-mails.sublime-project
+filter-reply-mails.sublime-workspace
