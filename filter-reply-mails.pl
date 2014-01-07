@@ -187,7 +187,7 @@ else {
 	opendir(DIR, $opts->{'folder-tmp'})
 		or die $!;
 
-	$path = $opts->{'folder-tmp'} . '/';
+	$path = $opts->{'folder-tmp'} . ($opts->{'folder-tmp'} =~ m/\/$/sg ? '' : '/');
 	@files = readdir(DIR);
 
 	closedir(DIR);
@@ -326,9 +326,9 @@ for my $file(@files) {
 		$parser->filer->purge;
 
 		if (! $opts->{'do-not-remove-files'}) {
-			say_verbose("\tClean up $file");
+			say_verbose("\tClean up $path$file");
 
-			unlink($file);
+			unlink($path . $file);
 		}
 	};
 }
