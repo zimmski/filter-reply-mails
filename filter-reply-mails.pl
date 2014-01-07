@@ -255,9 +255,10 @@ for my $file(@files) {
 
 						for my $selector (@dom_html) {
 							$dom->find($selector)->each(sub {
-								my $i =  shift;
+								my $i = shift;
+								my $html = $i->to_xml;
 
-								while ($i->to_xml =~ m/src="cid:([^"]+)"/sg) {
+								while ($html =~ m/src="cid:([^"]+)"/sg) {
 									$parts_remove{'<' . $1 . '>'} = 1;
 
 									say_verbose("\tFound attachment $1 to remove");
