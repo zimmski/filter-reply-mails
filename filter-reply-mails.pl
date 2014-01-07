@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-our $VERSION = 1.2;
+our $VERSION = 1.2.1;
 
 use utf8;
 
