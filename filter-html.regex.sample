@@ -3,6 +3,6 @@
 ([\n\r]*Von meinem iPad gesendet<\/(?:div|p)>.+)
 >*(____.+)
 >*(----.+)
->*(Von: .+?<\/p>.+?Gesendet:<\/p>.+)
+>*(Von:.*?<\/(?:p|span)>.+?Gesendet:<\/(?:b|p|span)>.+)
 (<br>\s+Von: .+? \(JIRA\) \[mailto:jira-repl.+)
 (________________________________________<br>\s+From.+)
