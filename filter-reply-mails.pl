@@ -22,7 +22,7 @@ my $options = Getopt::Compact->new(
 	name => 'Script to filter the text and html parts of mails fetched from an IMAP folder based on given regexes',
 	struct => [
 		[ 'do-not-remove-files', 'Do not remove mail files' ],
-		[ 'filter-dom', 'DOM selectors for html parts', ':s' ],
+		[ 'filter-dom', 'CSS selectors for html parts', ':s' ],
 		[ 'filter-html', 'Regexes for html parts', ':s' ],
 		[ 'filter-text', 'Regexes for text parts', ':s' ],
 		[ 'folder-tmp', 'Temporary mail folder', '=s' ],

@@ -4,7 +4,7 @@ This perl script was created out of the need to filter and modify mails from an 
 
 ## What does it do?
 
-The perl script connects to an IMAP server and fetches (and by default deletes) all mails from a specific IMAP folder to a temporary file system folder. A set of regexes from two different files and a file for DOM selectors trim all fetched mails. One regex file holds regexes for plain text parts of the mails while the other file holds regexes for HTML parts. Each line in these files defines one regex. DOM selectors are used to remove the matching elements. HTML parts can reference images therefore all referenced images of trimmed content are removed from the mail. After a mail has been trimmed it is moved to the destination file system folder.
+The perl script connects to an IMAP server and fetches (and by default deletes) all mails from a specific IMAP folder to a temporary file system folder. A set of regexes from two different files and a file for CSS selectors, to query the DOM of HTML mails, trim all fetched mails. One regex file holds regexes for plain text parts of the mails while the other file holds regexes for HTML parts. Each line in these files defines one regex. CSS selectors are used to remove the matching elements. HTML parts can reference images therefore all referenced images of trimmed content are removed from the mail. After a mail has been trimmed it is moved to the destination file system folder.
 
 I tried to use self-explanatory options and arguments for the script. If you need further details please execute the script with the --help argument or have a look at the example below.
 
@@ -25,7 +25,7 @@ That's it! If you need a SSL or TLS IMAP connection just use the corresponding -
 
 ```
     --do-not-remove-files              Do not remove mail files
-    --filter-dom                       DOM selectors for html parts
+    --filter-dom                       CSS selectors for html parts
     --filter-html                      Regexes for html parts
     --filter-text                      Regexes for text parts
     --folder-tmp                       Temporary mail folder
