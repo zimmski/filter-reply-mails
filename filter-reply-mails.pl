@@ -256,7 +256,7 @@ for my $file(@files) {
 						for my $selector (@dom_html) {
 							$dom->find($selector)->each(sub {
 								my $i = shift;
-								my $html = $i->to_xml;
+								my $html = $i->to_string();
 
 								while ($html =~ m/src="cid:([^"]+)"/sg) {
 									$parts_remove{'<' . $1 . '>'} = 1;
@@ -268,7 +268,7 @@ for my $file(@files) {
 							});
 						}
 
-						$t = $dom->to_xml();
+						$t = $dom->to_string();
 					}
 
 					if (@regex_html) {
