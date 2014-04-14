@@ -8,6 +8,7 @@ binmode STDOUT, ':utf8';
 
 use Modern::Perl;
 
+use Encode;
 use File::Slurp;
 use Getopt::Compact;
 use IO::File;
@@ -251,7 +252,10 @@ for my $file(@files) {
 					$t =~ s/&nbsp;/ /sg;
 
 					if (@dom_html) {
-						my $dom = Mojo::DOM->new(charset => 'UTF-8')->parse($t);
+						my $encoding = $p->head->mime_attr('content-type.charset');
+						$encoding ||= 'UTF-8';
+
+						my $dom = Mojo::DOM->new(charset => $encoding)->parse($t);
 
 						for my $selector (@dom_html) {
 							$dom->find($selector)->each(sub {
@@ -269,6 +273,12 @@ for my $file(@files) {
 						}
 
 						$t = $dom->to_string();
+
+						if ($encoding) {
+							$t = Encode::encode($encoding, $t);
+							Encode::from_to($t, $encoding, 'UTF-8');
+							$t = Encode::decode('UTF-8', $t);
+						}
 					}
 
 					if (@regex_html) {
