@@ -8,6 +8,17 @@ The perl script connects to an IMAP server and fetches (and by default deletes) 
 
 I tried to use self-explanatory options and arguments for the script. If you need further details please execute the script with the --help argument or have a look at the example below.
 
+## Installation
+
+1. Clone the repository
+
+	- `git clone https://github.com/zimmski/filter-reply-mails.git`
+
+2. Install the latest versions of the following Perl modules
+
+	- `cpan Modern::Perl Encode File::Slurp Getopt::Compact IO::File IO::Socket::SSL Mail::IMAPClient MIME::Parser Mojo::DOM String::Util Try::Tiny`
+	- **Note:** Older module versions might work but I do not support them.
+
 ## JIRA example use case
 
 1. Go to the "Incoming Mail" section in the administration and add a mail handler with the server "Local Files" and the handler "Add a comment from the non quoted email body". Test and save the handler. This handler looks for mails in the folder /import/mail of your JIRA user home folder.
