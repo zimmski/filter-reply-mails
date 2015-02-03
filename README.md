@@ -6,7 +6,7 @@ This perl script was created out of the need to filter and modify mails from an 
 
 The perl script connects to an IMAP server and fetches (and by default deletes) all mails from a specific IMAP folder to a temporary file system folder. A set of regexes from two different files and a file for CSS selectors, to query the DOM of HTML mails, trim all fetched mails. One regex file holds regexes for plain text parts of the mails while the other file holds regexes for HTML parts. Each line in these files defines one regex. CSS selectors are used to remove the matching elements. HTML parts can reference images therefore all referenced images of trimmed content are removed from the mail. After a mail has been trimmed it is moved to the destination file system folder.
 
-I tried to use self-explanatory options and arguments for the script. If you need further details please execute the script with the --help argument or have a look at the example below.
+I tried to use self-explanatory options and arguments for the script. If you need further details please execute the script with the `--help` argument or have a look at the example below.
 
 ## Installation
 
@@ -16,7 +16,19 @@ I tried to use self-explanatory options and arguments for the script. If you nee
 
 2. Install the latest versions of the following Perl modules
 
-	- `cpan Modern::Perl Encode File::Slurp Getopt::Compact IO::File IO::Socket::SSL Mail::IMAPClient MIME::Parser Mojo::DOM String::Util Try::Tiny`
+	- `cpan Modern::Perl Encode File::Slurp Getopt::Compact IO::File IO::Socket::SSL Mail::IMAPClient MIME::Parser Mojolicious String::Util Try::Tiny`
+	- I tested with the following version:
+		+ Encode 2.68
+		+ File::Slurp 9999.19
+		+ Getopt::Compact 0.04
+		+ IO::File 1.16
+		+ IO::Socket::SSL 2.012
+		+ Mail::IMAPClient 3.35
+		+ MIME::Parser 5.505
+		+ Modern::Perl 1.20150127
+		+ Mojolicious 5.77
+		+ String::Util 1.24
+		+ Try::Tiny 0.22
 	- **Note:** Older module versions might work but I do not support them.
 
 ## JIRA example use case
@@ -30,7 +42,15 @@ I tried to use self-explanatory options and arguments for the script. If you nee
 	perl /path/to/the/filter-reply-mails.pl --mail-server your.mail.server.domain --mail-user your-mail-user --mail-pwd your-mail-password --folder-tmp /the/tmp/folder --folder-dst /your/jira/home/folder/import/mail --filter-dom /path/to/the/filter-html.dom --filter-html /path/to/the/filter-html.regex --filter-text /path/to/the/filter-text.regex
 	```
 
-That's it! If you need a SSL or TLS IMAP connection just use the corresponding --mail-ssl or --mail-tls flag for the command. If you need to use a different port for the IMAP connection you can define it via the --mail-server argument e.g. "--mail-server 'your.mail.server.domain:143'".
+That's it! If you need a SSL or TLS IMAP connection just use the corresponding `--mail-ssl` or `--mail-tls` flag for the command. If you need to use a different port for the IMAP connection you can define it via the `--mail-server` argument e.g. `--mail-server 'your.mail.server.domain:143'`.
+
+Common settings are:
+
+- No encryption: `--mail-server 'your.mail.server.domain:143'`
+- SSL: `--mail-server 'your.mail.server.domain:993' --mail-ssl`
+- TLS: `--mail-server 'your.mail.server.domain:143' --mail-tls`
+
+It is also common that a self-signed certificate is declined by the IMAP client. Please use the `--mail-do-not-verify-certificate` flag in that case.
 
 ## CLI arguments
 
